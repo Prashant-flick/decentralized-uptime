@@ -3,11 +3,18 @@ import client from '@repo/db/client'
 import dotenv from 'dotenv'
 import { authMiddleware } from './middleware/auth';
 import { authRouter } from './routes/auth';
+import cors from 'cors'
+import cookieParser from 'cookie-parser'
 
 dotenv.config();
 
 const app = express();
 app.use(express.json());
+app.use(cors({
+    origin: "http://localhost:5173",
+    credentials: true
+}))
+app.use(cookieParser());
 
 app.use("/api/v1", authRouter);
 
@@ -78,7 +85,7 @@ app.post("/api/v1/website", authMiddleware, async(req, res) => {
 
 })
 
-app.get("api/v1/website/ticks", authMiddleware, async(req,res)=>{
+app.get("/api/v1/website/ticks", authMiddleware, async(req,res)=>{
     const websiteId = req.query.websiteId as unknown as string;
     if (!websiteId) {
         res.status(400)
@@ -109,7 +116,7 @@ app.get("api/v1/website/ticks", authMiddleware, async(req,res)=>{
     }
 })
 
-app.get("api/v1/websites", authMiddleware, async(req,res) => {
+app.get("/api/v1/websites", authMiddleware, async(req,res) => {
     try {
         const websiteRes = await client.website.findMany({
             where: {
@@ -126,7 +133,7 @@ app.get("api/v1/websites", authMiddleware, async(req,res) => {
     }
 })
 
-app.delete("api/v1/website", authMiddleware, async(req,res) => {
+app.delete("/api/v1/website", authMiddleware, async(req,res) => {
     const websiteId = req.query.websiteId as unknown as string;
     if (!websiteId) {
         res.status(400)

@@ -1,9 +1,11 @@
 import { Router } from "express"
 import client from "@repo/db/client"
 import bcrypt from 'bcryptjs'
-import jwt from 'jsonwebtoken'
+import jwt, {SignOptions} from 'jsonwebtoken'
 
 export const authRouter = Router();
+
+type expiresInType = `${number}${'M'|'Y'|'D'}`;
 
 authRouter.post('/signup', async(req,res) => {
     const { email, password, confirmPassword } = req.body;
@@ -54,9 +56,8 @@ const createAccessToken = (user: {id: string, email: string}) => {
       email: user.email
     }, process.env.ACCESS_TOKEN_SECRET || "HELLO",
     {
-      expiresIn: parseInt(process.env.ACCESS_TOKEN_EXPIRY || "3600", 10),
+      expiresIn: process.env.ACCESS_TOKEN_EXPIRY as expiresInType
     })
-    
     return token;
 }
 
@@ -64,16 +65,36 @@ const createRefreshToken = (user: {id: string, email: string}) => {
     const token = jwt.sign({
       userId: user.id,
       email: user.email
-    }, process.env.REFRESH_TOKEN_SECRET || "HELLO",
+    },process.env.REFRESH_TOKEN_SECRET || "Hello",
     {
-      expiresIn: parseInt(process.env.REFRESH_TOKEN_EXPIRY || "86400", 10),
+      expiresIn: process.env.REFRESH_TOKEN_EXPIRY as expiresInType,
     })
-    
     return token;
 }
 
-authRouter.post('singin', async(req,res) => {
+authRouter.post('/refresh', async(req, res) => {
+    const refreshToken = req.cookies.refreshToken as string;
+     
+    if (!refreshToken) {
+        res.status(400)
+        .json({
+            message: "refresh token expired"
+        })
+        return;
+    }
+
+    const decodedToken = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET || "Hello") as { userId:string, email: string}
+    const accessToken = createAccessToken({id: decodedToken.userId, email: decodedToken.email});
+    res.status(200)
+    .json({
+        accessToken,
+        userId: decodedToken.userId
+    })
+})
+
+authRouter.post('/signin', async(req,res) => {
     const {email, password} = req.body
+    
     if (!email || !password) {
         res.status(400)
         .json({
@@ -107,7 +128,14 @@ authRouter.post('singin', async(req,res) => {
     const accessToken = createAccessToken(userRes);
     const refreshToken = createRefreshToken(userRes);
 
-    res.status(400)
+    res.cookie("refreshToken", refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV==='production',
+        sameSite: 'strict',
+        path: '/'
+    });
+
+    res.status(200)
     .json({
         "message": "user signed In",
         token: accessToken,
@@ -115,6 +143,16 @@ authRouter.post('singin', async(req,res) => {
     })
 })
 
-authRouter.post('refreshToken', async(req,res) => {
+authRouter.post('/signout', async(req,res) => {
+    res.clearCookie('refreshToken', {
+        path: '/',
+        httpOnly: true,
+        sameSite: 'strict',
+        secure: process.env.NODE_ENV==='production'
+    })
 
+    res.status(200)
+    .json({
+        message: "signout success"
+    })
 })

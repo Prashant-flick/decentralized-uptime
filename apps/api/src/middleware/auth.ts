@@ -11,8 +11,8 @@ export const authMiddleware = async(req: Request, res: Response, next: NextFunct
         return;
     } else {
         try {
-            const decodedToken = jwt.verify(token, process.env.JWT_SECRET || "Hello") as {id: string, email: string};
-            req.userId = decodedToken.id;
+            const decodedToken = jwt.verify(token, process.env.JWT_SECRET || "Hello") as {userId: string, email: string};
+            req.userId = decodedToken.userId;
             next();
         } catch (error) {
             res.status(403)

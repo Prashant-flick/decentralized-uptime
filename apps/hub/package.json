@@ -1,0 +1,25 @@
+{
+  "name": "hub",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node dist/index.js",
+    "build": "esbuild src/index.ts outfile=dist/index.js --bundle --platform=node tsconfig=tsconfig.json",
+    "dev": "npm run build && npm start"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@repo/db": "workspace:*",
+    "@solana/web3.js": "^1.98.0",
+    "@types/ws": "^8.18.1",
+    "common": "workspace:*",
+    "tweetnacl": "^1.0.3",
+    "tweetnacl-util": "^0.15.1",
+    "typescript": "^5.8.3",
+    "uuid": "^11.1.0",
+    "ws": "^8.18.1"
+  }
+}
