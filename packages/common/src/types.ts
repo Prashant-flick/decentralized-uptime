@@ -1,6 +1,6 @@
 
 export type IncomingMessage = {
-    type: 'singup',
+    type: 'signup',
     payload: signUpIncomingMessage,
 } | {
     type: 'validate',
@@ -24,7 +24,7 @@ export type signUpIncomingMessage = {
 
 export type validateIncomingMessage = {
     callbackId: string,
-    signedMessage: string,
+    signature: string,
     status: 'Good' | 'Bad',
     latency: number,
     websiteId: string,

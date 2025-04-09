@@ -75,7 +75,8 @@ const singupHandler = async(ws: WebSocket, {ip, publicKey, signature, callbackId
             data: {
                 ip,
                 publicKey,
-                location: 'unknown'
+                location: 'unknown',
+                pendingPayouts: 0
             }
         })
     
@@ -123,7 +124,11 @@ setInterval(async () => {
 
             CALLBACKS[callbackId] = async(data: IncomingMessage) => {
                 if (data.type==='validate') {
-                    const verified = true;
+                    const verified = verifyMessage(
+                        `Replying to ${data.payload.callbackId}`,
+                        availableValidators[validatorId].publicKey,
+                        data.payload.signature
+                    );
                     if (!verified) {
                         return;
                     }

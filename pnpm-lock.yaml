@@ -157,6 +157,36 @@ importers:
         specifier: ^8.18.1
         version: 8.18.1(bufferutil@4.0.9)(utf-8-validate@5.0.10)
 
+  apps/validator:
+    dependencies:
+      '@solana/web3.js':
+        specifier: ^1.98.0
+        version: 1.98.0(bufferutil@4.0.9)(utf-8-validate@5.0.10)
+      '@types/ws':
+        specifier: ^8.18.1
+        version: 8.18.1
+      common:
+        specifier: workspace:*
+        version: link:../../packages/common
+      esbuild:
+        specifier: ^0.25.2
+        version: 0.25.2
+      tweetnacl:
+        specifier: ^1.0.3
+        version: 1.0.3
+      tweetnacl-util:
+        specifier: ^0.15.1
+        version: 0.15.1
+      typescript:
+        specifier: ^5.8.3
+        version: 5.8.3
+      uuid:
+        specifier: ^11.1.0
+        version: 11.1.0
+      ws:
+        specifier: ^8.18.1
+        version: 8.18.1(bufferutil@4.0.9)(utf-8-validate@5.0.10)
+
   packages/common:
     dependencies:
       typescript:
