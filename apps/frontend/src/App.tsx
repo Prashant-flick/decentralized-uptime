@@ -16,7 +16,6 @@ function App() {
         const res = await axios.post(`${conf.BackendUrl}/refresh`, {}, {
           withCredentials: true
         })
-  
         login(res.data.accessToken, res.data.userId);
       } catch (error) {
         console.error(error);

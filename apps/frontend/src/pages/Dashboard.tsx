@@ -1,49 +1,89 @@
-import React, { useState, useEffect } from 'react';
-import { Activity, Plus, ArrowLeft, ExternalLink } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Activity, Plus, ArrowLeft, ExternalLink, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import axios from 'axios';
+import { conf } from '../conf/config';
+import { useAuth } from '../context/useAuth';
 
 interface Website {
   id: string;
   url: string;
-  name: string;
   status: ('initializing' | 'up' | 'down')[];
 }
 
 function Dashboard() {
   const [websites, setWebsites] = useState<Website[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [newWebsite, setNewWebsite] = useState({ name: '', url: '' });
+  const [newWebsiteUrl, setNewWebsiteUrl] = useState('');
+  const { accessToken } = useAuth();
+  const [showDeleteModal, setShowDeleteModal] = useState('');
 
-  const addWebsite = () => {
-    if (newWebsite.name && newWebsite.url) {
-      const website: Website = {
-        id: Date.now().toString(),
-        ...newWebsite,
-        status: Array(10).fill('initializing')
-      };
-      setWebsites([...websites, website]);
-      setNewWebsite({ name: '', url: '' });
-      setShowAddModal(false);
+  useEffect(() => {
+    console.log(accessToken);
+    if (accessToken) {
+      updateWebsiteTicks();
+    }
+  },[accessToken])
 
-      // Simulate status updates
-      let index = 0;
-      const interval = setInterval(() => {
-        if (index < 10) {
-          setWebsites(prev => {
-            const websiteIndex = prev.findIndex(w => w.id === website.id);
-            if (websiteIndex === -1) return prev;
+  setTimeout(() => {
+    if (accessToken) {
+      updateWebsiteTicks();
+    }
+  }, 60*1000);
 
-            const newWebsites = [...prev];
-            const newStatus = [...newWebsites[websiteIndex].status];
-            newStatus[index] = Math.random() > 0.2 ? 'up' : 'down';
-            newWebsites[websiteIndex] = { ...newWebsites[websiteIndex], status: newStatus };
-            return newWebsites;
-          });
-          index++;
-        } else {
-          clearInterval(interval);
+  const updateWebsiteTicks = async() => {
+    const websitesRes = await axios.get(`${conf.BackendUrl}/websites`, {
+      headers: {
+        Authorization: `${accessToken}`
+      }
+    })
+    const Websites: {url: string, id: string}[] = websitesRes.data;
+    const updateWebsite = Websites.map(website => ({
+      id: website.id,
+      url: website.url,
+      status: Array(10).fill('initializing'),
+    }));
+
+    const updatedWebsite = await Promise.all(
+      updateWebsite.map(async(website) => {
+        const ticksRes = await axios.get(`${conf.BackendUrl}/website/ticks?websiteId=${website.id}`, {
+          headers: {
+            Authorization: `${accessToken}`
+          }
+        })
+        const ticks: { status: 'Good'|'Bad', createdAt: string }[] = ticksRes.data.ticks;
+        for (let i=0; i<10 && i<ticks.length; i++) {
+          const idx = 10-i-1;
+          website.status[idx] = ticks[i].status==='Bad'?'down':'up';
         }
-      }, 3000);
+        return website;
+      })
+    )
+    setWebsites(updatedWebsite);
+  }
+
+  const addWebsite = async() => {
+    if (newWebsiteUrl) {
+      try {
+        const createWebsiteRes = await axios.post(`${conf.BackendUrl}/website`, {
+          url: newWebsiteUrl
+        }, {
+          headers: {
+            Authorization: `${accessToken}`
+          }
+        })
+  
+        const website: Website = {
+          id: createWebsiteRes.data.id,
+          url: newWebsiteUrl,
+          status: Array(10).fill('initializing')
+        };
+        setWebsites(prev => [...prev, website]);
+        setNewWebsiteUrl('');
+        setShowAddModal(false);
+      } catch (error) {
+        console.error(error);
+      }
     }
   };
 
@@ -57,6 +97,22 @@ function Dashboard() {
         return 'bg-gray-400';
     }
   };
+
+  const handleDeleteWebsite = async(id: string) => {
+    if (id && accessToken) {
+      try {
+        await axios.delete(`${conf.BackendUrl}/website?websiteId=${id}`, {
+          headers: {
+            Authorization: `${accessToken}`
+          }
+        })
+        setWebsites(prev => prev.filter(website => website.id!==id));
+        setShowDeleteModal('');
+      } catch (error) {
+        console.error(error);
+      }
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
@@ -102,7 +158,7 @@ function Dashboard() {
               <div key={website.id} className="bg-gray-800 rounded-lg p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div>
-                    <h3 className="text-xl font-semibold">{website.name}</h3>
+                    <h3 className="text-xl font-semibold">{website.url}</h3>
                     <div className="flex items-center space-x-2 text-gray-400">
                       <ExternalLink className="w-4 h-4" />
                       <a href={website.url} target="_blank" rel="noopener noreferrer" className="hover:text-emerald-400">
@@ -110,14 +166,23 @@ function Dashboard() {
                       </a>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    {website.status.map((status, index) => (
-                      <div
-                        key={index}
-                        className={`w-3 h-8 rounded-sm ${getStatusColor(status)}`}
-                        title={`Status ${index + 1}: ${status}`}
-                      />
-                    ))}
+                  <div className='flex items-center space-x-6'>
+                    <div className="flex items-center space-x-2">
+                      {website.status.map((status, index) => (
+                        <div
+                          key={index}
+                          className={`w-3 h-8 rounded-sm ${getStatusColor(status)}`}
+                          title={`Status ${index + 1}: ${status}`}
+                        />
+                      ))}
+                    </div>
+                    <button
+                      onClick={() => setShowDeleteModal(website.id)}
+                      className="text-gray-400 hover:text-red-400 transition-colors"
+                      title="Delete website"
+                    >
+                      <Trash2 className="w-5 h-5" />
+                    </button>
                   </div>
                 </div>
               </div>
@@ -133,21 +198,11 @@ function Dashboard() {
             <h2 className="text-xl font-semibold mb-4">Add New Website</h2>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Website Name</label>
-                <input
-                  type="text"
-                  value={newWebsite.name}
-                  onChange={(e) => setNewWebsite({ ...newWebsite, name: e.target.value })}
-                  className="w-full bg-gray-700 rounded-lg px-4 py-2 text-white"
-                  placeholder="My Website"
-                />
-              </div>
-              <div>
                 <label className="block text-sm font-medium text-gray-300 mb-1">Website URL</label>
                 <input
                   type="url"
-                  value={newWebsite.url}
-                  onChange={(e) => setNewWebsite({ ...newWebsite, url: e.target.value })}
+                  value={newWebsiteUrl}
+                  onChange={(e) => setNewWebsiteUrl(e.target.value)}
                   className="w-full bg-gray-700 rounded-lg px-4 py-2 text-white"
                   placeholder="https://example.com"
                 />
@@ -166,6 +221,30 @@ function Dashboard() {
                   Add Website
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
+          <div className="bg-gray-800 rounded-lg p-6 w-full max-w-md">
+            <h2 className="text-xl font-semibold mb-4">Delete Website</h2>
+            <p className="text-gray-300 mb-6">
+              Are you sure you want to delete this website? This action cannot be undone.
+            </p>
+            <div className="flex justify-end space-x-4">
+              <button
+                onClick={() => setShowDeleteModal('')}
+                className="px-4 py-2 text-gray-300 hover:text-white transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleDeleteWebsite(showDeleteModal)}
+                className="bg-red-500 hover:bg-red-600 px-4 py-2 rounded-lg transition-colors"
+              >
+                Delete Website
+              </button>
             </div>
           </div>
         </div>

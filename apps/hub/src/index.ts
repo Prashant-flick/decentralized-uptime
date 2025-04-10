@@ -14,7 +14,7 @@ const paymentPerValidation = 100; //lampods
 
 wss.on('connection', (ws)=>{
     ws.on('message', async(data)=> {
-        const parsedData = JSON.parse(JSON.stringify(data));
+        const parsedData: IncomingMessage = JSON.parse(data.toString());
         
         switch(parsedData.type) {
             case 'signup':
@@ -28,11 +28,11 @@ wss.on('connection', (ws)=>{
                 }
                 break;
             case 'validate':
-                CALLBACKS[parsedData.callbackId] = (parsedData);
-                delete CALLBACKS[parsedData.callbackId]
+                CALLBACKS[parsedData.payload.callbackId]?.(parsedData);
+                delete CALLBACKS[parsedData.payload.callbackId]
                 break;
             default:
-                console.log('wrong data type', parsedData.type);
+                console.log('wrong data type', parsedData);
                 break;
         }
     })
@@ -96,11 +96,13 @@ const singupHandler = async(ws: WebSocket, {ip, publicKey, signature, callbackId
 
 const verifyMessage = async(message: string, publiKey: string, signature: string) => {
     const messageBytes = nacl_util.decodeUTF8(message);
+    
     const result = nacl.sign.detached.verify(
         messageBytes,
         new Uint8Array(JSON.parse(signature)),
         new PublicKey(publiKey).toBytes(),
     )
+    
     return result;
 }
 
@@ -118,7 +120,8 @@ setInterval(async () => {
                 type: 'validate',
                 payload: {
                     callbackId,
-                    url: website.url
+                    url: website.url,
+                    websiteId: website.id
                 }
             }))
 

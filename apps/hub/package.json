@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node dist/index.js",
-    "build": "esbuild src/index.ts outfile=dist/index.js --bundle --platform=node tsconfig=tsconfig.json",
+    "build": "pnpx esbuild src/index.ts --bundle --outfile=dist/index.js --platform=node --tsconfig=tsconfig.json",
     "dev": "npm run build && npm start"
   },
   "keywords": [],
@@ -16,6 +16,7 @@
     "@solana/web3.js": "^1.98.0",
     "@types/ws": "^8.18.1",
     "common": "workspace:*",
+    "esbuild": "^0.25.2",
     "tweetnacl": "^1.0.3",
     "tweetnacl-util": "^0.15.1",
     "typescript": "^5.8.3",

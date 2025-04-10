@@ -46,7 +46,8 @@ app.post("/api/v1/website", authMiddleware, async(req, res) => {
 
                     res.status(200)
                     .json({
-                        message: "website created succesfully"
+                        message: "website created succesfully",
+                        id: websiteRes.id
                     })
                 } catch (error) {
                     res.status(400)
@@ -57,13 +58,13 @@ app.post("/api/v1/website", authMiddleware, async(req, res) => {
             } else {
                 res.status(400)
                 .json({
-                    message: "website already exists"
+                    message: "website already exists",
                 })
             }
             return;
         } else {
             try {
-                await client.website.create({
+                const WebsiteRes = await client.website.create({
                     data: {
                         url,
                         creatorId: req.userId!
@@ -71,12 +72,13 @@ app.post("/api/v1/website", authMiddleware, async(req, res) => {
                 })
                 res.status(200)
                 .json({
-                    message: "website created succesfully"
+                    message: "website created succesfully",
+                    id: WebsiteRes.id
                 })
             } catch (error) {
                 res.status(400)
                 .json({
-                    message: "website already exists"
+                    message: "website creation failed"
                 })
             }
             return;
@@ -100,9 +102,14 @@ app.get("/api/v1/website/ticks", authMiddleware, async(req,res)=>{
                     creatorId: req.userId!
                 },
                 include: {
-                    ticks: true
-                }
+                    ticks: {
+                        orderBy: {
+                            createdAt: 'desc'
+                        }
+                    }
+                },
             })
+            
             res.status(200)
             .json(websiteRes)
         } catch (error) {
@@ -120,7 +127,8 @@ app.get("/api/v1/websites", authMiddleware, async(req,res) => {
     try {
         const websiteRes = await client.website.findMany({
             where: {
-                creatorId: req.userId
+                creatorId: req.userId,
+                disabled: false
             }
         })
         res.status(200)
